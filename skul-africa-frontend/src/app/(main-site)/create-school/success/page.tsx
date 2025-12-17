@@ -11,16 +11,6 @@ import { Suspense } from "react";
 function SuccessContent() {
     const searchParams = useSearchParams();
     const subdomain = searchParams.get("subdomain");
-    const [schoolData, setSchoolData] = useState<any>(null);
-
-    useEffect(() => {
-        if (subdomain) {
-            const data = localStorage.getItem(`${subdomain}-school-data`);
-            if (data) {
-                setSchoolData(JSON.parse(data));
-            }
-        }
-    }, [subdomain]);
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-4 relative overflow-hidden">
@@ -46,13 +36,9 @@ function SuccessContent() {
                 <div className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 backdrop-blur-sm">
                     <div className="flex flex-col items-center space-y-4">
                         <div className="w-16 h-16 bg-neutral-800 rounded-xl flex items-center justify-center mb-2">
-                            {schoolData?.logo ? (
-                                <img src={schoolData.logo} alt="School Logo" className="w-full h-full object-cover rounded-xl" />
-                            ) : (
-                                <GraduationCap className="w-8 h-8 text-neutral-500" />
-                            )}
+                            <GraduationCap className="w-8 h-8 text-neutral-500" />
                         </div>
-                        <h2 className="text-2xl font-bold text-white">{schoolData?.schoolName || "Your School"}</h2>
+                        <h2 className="text-2xl font-bold text-white">Your School</h2>
                         <div className="px-4 py-2 bg-black/50 rounded-lg border border-neutral-800 font-mono text-primary">
                             {subdomain}.skulafrica.com
                         </div>

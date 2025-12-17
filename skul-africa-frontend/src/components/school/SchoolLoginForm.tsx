@@ -1,30 +1,40 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
+import { loginSchool } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SchoolLoginFormProps {
   schoolName?: string;
 }
 
 export function SchoolLoginForm({ schoolName = 'School' }: SchoolLoginFormProps) {
+  const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [profileCode, setProfileCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Mock login - replace with actual authentication
-    setTimeout(() => {
+    try {
+      const authData = await loginSchool({ email, profileCode });
+      if (authData.school) {
+        login(authData.school, 'school');
+      }
+      router.push('/admin/dashboard');
+    } catch (error) {
+      // Error handled by API interceptor
+    } finally {
       setIsLoading(false);
-      // Redirect to admin dashboard
-      window.location.href = '/admin';
-    }, 1000);
+    }
   };
 
   return (
@@ -55,15 +65,15 @@ export function SchoolLoginForm({ schoolName = 'School' }: SchoolLoginFormProps)
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-neutral-300 mb-2">
-              Password
+            <label htmlFor="profileCode" className="block text-sm font-medium text-neutral-300 mb-2">
+              Profile Code
             </label>
             <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              id="profileCode"
+              type="text"
+              value={profileCode}
+              onChange={(e) => setProfileCode(e.target.value)}
+              placeholder="Enter your profile code"
               required
               className="bg-neutral-900 border-neutral-700 text-white placeholder-neutral-500 focus:border-primary"
             />

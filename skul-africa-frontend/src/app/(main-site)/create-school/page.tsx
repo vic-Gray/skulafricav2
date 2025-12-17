@@ -3,61 +3,45 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { GraduationCap, Mail, Lock, Eye, EyeOff, Building2, Globe, User, ArrowRight, Upload, Check, Loader2, AlertCircle } from "lucide-react";
+import { GraduationCap, Mail, Phone, MapPin, Building2, Globe, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { createSchool } from "@/lib/api";
 
 export default function CreateSchoolPage() {
     const router = useRouter();
-    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
-        schoolName: "",
-        subdomain: "",
-        proprietorName: "",
+        name: "",
         email: "",
-        password: "",
-        confirmPassword: "",
-        logo: null as File | null
+        phone: "",
+        address: "",
+        subdomain: "",
+        isActive: true
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     // Auto-generate subdomain from school name
     useEffect(() => {
-        if (formData.schoolName && !formData.subdomain) {
-            const generated = formData.schoolName
+        if (formData.name && !formData.subdomain) {
+            const generated = formData.name
                 .toLowerCase()
                 .replace(/[^a-z0-9]/g, '')
                 .slice(0, 20);
             setFormData(prev => ({ ...prev, subdomain: generated }));
         }
-    }, [formData.schoolName]);
+    }, [formData.name]);
 
-    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setFormData(prev => ({ ...prev, logo: file }));
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setLogoPreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
 
-        if (!formData.schoolName) newErrors.schoolName = "School name is required";
-        if (!formData.proprietorName) newErrors.proprietorName = "Proprietor name is required";
+        if (!formData.name) newErrors.name = "School name is required";
         if (!formData.email) newErrors.email = "Email is required";
-        if (!formData.password) newErrors.password = "Password is required";
-        if (formData.password !== formData.confirmPassword) {
-            newErrors.confirmPassword = "Passwords do not match";
-        }
+        if (!formData.phone) newErrors.phone = "Phone is required";
+        if (!formData.address) newErrors.address = "Address is required";
         if (!formData.subdomain) newErrors.subdomain = "Subdomain is required";
 
         setErrors(newErrors);
@@ -71,20 +55,14 @@ export default function CreateSchoolPage() {
 
         setIsLoading(true);
 
-        // Simulate API delay
-        setTimeout(() => {
-            // Save to localStorage
-            const schoolData = {
-                ...formData,
-                logo: logoPreview, // Storing base64 string for demo purposes
-                createdAt: new Date().toISOString()
-            };
-
-            localStorage.setItem(`${formData.subdomain}-school-data`, JSON.stringify(schoolData));
-
-            setIsLoading(false);
+        try {
+            await createSchool(formData);
             router.push(`/create-school/success?subdomain=${formData.subdomain}`);
-        }, 1500);
+        } catch (error) {
+            // Error is handled by the API interceptor with toast
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const isSubdomainValid = formData.subdomain.length >= 3 && /^[a-z0-9-]+$/.test(formData.subdomain);
@@ -118,16 +96,16 @@ export default function CreateSchoolPage() {
                                 <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 group-focus-within:text-primary transition-colors" />
                                 <input
                                     type="text"
-                                    value={formData.schoolName}
-                                    onChange={(e) => setFormData({ ...formData, schoolName: e.target.value })}
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     className={cn(
                                         "w-full pl-12 pr-4 py-3.5 bg-neutral-900/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-neutral-600 transition-all",
-                                        errors.schoolName ? "border-red-500/50" : "border-neutral-800"
+                                        errors.name ? "border-red-500/50" : "border-neutral-800"
                                     )}
                                     placeholder="e.g. Modern High School"
                                 />
                             </div>
-                            {errors.schoolName && <p className="text-red-500 text-xs mt-1">{errors.schoolName}</p>}
+                            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                         </div>
 
                         {/* Subdomain */}
@@ -152,24 +130,6 @@ export default function CreateSchoolPage() {
                             </div>
                         </div>
 
-                        {/* Proprietor Name */}
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-300 mb-2">Proprietor Name</label>
-                            <div className="relative group">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 group-focus-within:text-primary transition-colors" />
-                                <input
-                                    type="text"
-                                    value={formData.proprietorName}
-                                    onChange={(e) => setFormData({ ...formData, proprietorName: e.target.value })}
-                                    className={cn(
-                                        "w-full pl-12 pr-4 py-3.5 bg-neutral-900/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-neutral-600 transition-all",
-                                        errors.proprietorName ? "border-red-500/50" : "border-neutral-800"
-                                    )}
-                                    placeholder="Full Name"
-                                />
-                            </div>
-                            {errors.proprietorName && <p className="text-red-500 text-xs mt-1">{errors.proprietorName}</p>}
-                        </div>
 
                         {/* Email */}
                         <div>
@@ -190,79 +150,45 @@ export default function CreateSchoolPage() {
                             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                         </div>
 
-                        {/* Password & Confirm */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-300 mb-2">Password</label>
-                                <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 group-focus-within:text-primary transition-colors" />
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        className={cn(
-                                            "w-full pl-12 pr-10 py-3.5 bg-neutral-900/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-neutral-600 transition-all",
-                                            errors.password ? "border-red-500/50" : "border-neutral-800"
-                                        )}
-                                        placeholder="••••••••"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors"
-                                    >
-                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                        {/* Phone */}
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-300 mb-2">Phone Number</label>
+                            <div className="relative group">
+                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                <input
+                                    type="tel"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                    className={cn(
+                                        "w-full pl-12 pr-4 py-3.5 bg-neutral-900/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-neutral-600 transition-all",
+                                        errors.phone ? "border-red-500/50" : "border-neutral-800"
+                                    )}
+                                    placeholder="+2348012345678"
+                                />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-300 mb-2">Confirm Password</label>
-                                <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 group-focus-within:text-primary transition-colors" />
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        value={formData.confirmPassword}
-                                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                        className={cn(
-                                            "w-full pl-12 pr-4 py-3.5 bg-neutral-900/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-neutral-600 transition-all",
-                                            errors.confirmPassword ? "border-red-500/50" : "border-neutral-800"
-                                        )}
-                                        placeholder="••••••••"
-                                    />
-                                </div>
-                                {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
-                            </div>
+                            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                         </div>
 
-                        {/* Logo Upload */}
+                        {/* Address */}
                         <div>
-                            <label className="block text-sm font-medium text-neutral-300 mb-2">School Logo (Optional)</label>
-                            <div className="flex items-center gap-4">
-                                <div className="relative w-16 h-16 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center overflow-hidden group">
-                                    {logoPreview ? (
-                                        <img src={logoPreview} alt="Logo preview" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <Upload className="w-6 h-6 text-neutral-600 group-hover:text-neutral-400 transition-colors" />
+                            <label className="block text-sm font-medium text-neutral-300 mb-2">Address</label>
+                            <div className="relative group">
+                                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500 group-focus-within:text-primary transition-colors" />
+                                <input
+                                    type="text"
+                                    value={formData.address}
+                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                    className={cn(
+                                        "w-full pl-12 pr-4 py-3.5 bg-neutral-900/50 border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-neutral-600 transition-all",
+                                        errors.address ? "border-red-500/50" : "border-neutral-800"
                                     )}
-                                </div>
-                                <div className="flex-1">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleLogoChange}
-                                        className="block w-full text-sm text-neutral-400
-                                            file:mr-4 file:py-2 file:px-4
-                                            file:rounded-full file:border-0
-                                            file:text-sm file:font-semibold
-                                            file:bg-neutral-800 file:text-white
-                                            hover:file:bg-neutral-700
-                                            cursor-pointer"
-                                    />
-                                    <p className="text-xs text-neutral-500 mt-1">PNG, JPG up to 5MB</p>
-                                </div>
+                                    placeholder="Lagos, Nigeria"
+                                />
                             </div>
+                            {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
                         </div>
+
+
 
                         <Button
                             type="submit"
