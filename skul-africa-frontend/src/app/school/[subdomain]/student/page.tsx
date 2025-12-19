@@ -1,43 +1,36 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { loginStudent } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function StudentLoginPage() {
   const params = useParams();
+  const router = useRouter();
+  const { login } = useAuth();
   const subdomain = params.subdomain as string;
-  const [email, setEmail] = useState('');
+  const [admissionNumber, setAdmissionNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
 
     try {
-      // Get students from localStorage
-      const studentsKey = `${subdomain}-students`;
-      const students = JSON.parse(localStorage.getItem(studentsKey) || '[]');
-
-      // Find student
-      const student = students.find((s: any) => s.email === email && s.password === password);
-
-      if (student) {
-        // Store current user
-        localStorage.setItem(`${subdomain}-current-student`, JSON.stringify(student));
-        // Redirect to dashboard
-        window.location.href = `/school/${subdomain}/student/dashboard`;
-      } else {
-        setError('Invalid email or password');
+      const authData = await loginStudent({ admissionNumber, password, subdomain });
+      if (authData.student) {
+        login(authData.student, 'student');
       }
-    } catch (err) {
-      setError('Login failed. Please try again.');
+      router.push(`/school/${subdomain}/student/dashboard`);
+    } catch (error) {
+      // Error handled by API
     } finally {
       setIsLoading(false);
     }
@@ -57,15 +50,15 @@ export default function StudentLoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-neutral-300 mb-2">
-                Email Address
+              <label htmlFor="admissionNumber" className="block text-sm font-medium text-neutral-300 mb-2">
+                Admission Number
               </label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="student@school.edu"
+                id="admissionNumber"
+                type="text"
+                value={admissionNumber}
+                onChange={(e) => setAdmissionNumber(e.target.value)}
+                placeholder="ADM123"
                 required
                 className="bg-neutral-900 border-neutral-700 text-white placeholder-neutral-500 focus:border-primary"
               />
@@ -86,11 +79,6 @@ export default function StudentLoginPage() {
               />
             </div>
 
-            {error && (
-              <div className="text-red-500 text-sm text-center">
-                {error}
-              </div>
-            )}
 
             <Button
               type="submit"
