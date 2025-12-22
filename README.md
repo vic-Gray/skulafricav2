@@ -356,5 +356,82 @@ Government-ready reports
 
 AI-powered insights
 
+🏗️ DATA MODEL (STRICT BUT FLEXIBLE)
+1️⃣ Central Finance Record (Hard-Linked)
+finance_records
+- id (uuid)
+- school_id
+
+- academic_year_id   🔒 REQUIRED
+- academic_term_id   🔒 REQUIRED
+
+- channel_type       // SCHOOL_FEE | OTHER_INCOME | EXPENSE
+- channel_id
+
+- direction          // IN | OUT
+- amount
+
+- recorded_by
+- recorded_at
+
+- hash_signature
+- is_reversed
+
+
+✅ DB-level NOT NULL on year & term
+✅ Index: (school_id, academic_year_id, academic_term_id)
+
+This makes reporting natural.
+
+2️⃣ School Fee Payment (Special Channel)
+school_fee_payments
+- id (uuid)
+- school_id
+
+- academic_year_id   🔒
+- academic_term_id   🔒
+
+- student_id
+- public_receipt_id
+- internal_hash
+
+- payment_method
+- total_amount
+
+- recorded_by
+- recorded_at
+- is_locked
+
+
+🚫 You cannot create this without year + term
+🚫 You cannot change year/term later
+
+3️⃣ Student Fee Ledger (Derived, Period-Bound)
+student_fee_ledgers
+- id
+- student_id
+- fee_structure_id
+
+- academic_year_id   🔒
+- academic_term_id   🔒
+
+- expected_amount
+- paid_amount
+- balance
+- status
+- locked
+
+
+Each ledger row is term-specific.
+
+4️⃣ Other Income / Expense (Same Rule)
+other_income_payments
+- id
+- school_id
+- academic_year_id
+- academic_term_id
+- category
+- amount
+
 📝 License
 This project is (add license here, e.g., MIT).
